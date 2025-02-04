@@ -16,12 +16,13 @@ import (
 var version string
 
 type cmdOpts struct {
-	Host      string `long:"host" description:"Hostname to ping" required:"true"`
-	Timeout   int    `long:"timeout" default:"1000" description:"timeout millisec per ping"`
-	Interval  int    `long:"interval" default:"10" description:"sleep millisec after every ping"`
-	Count     int    `long:"count" default:"10" description:"Count Sending ping"`
-	KeyPrefix string `long:"key-prefix" description:"Metric key prefix" required:"true"`
-	Version   bool   `short:"v" long:"version" description:"Show version"`
+	Host        string `long:"host" description:"Hostname to ping" required:"true"`
+	Timeout     int    `long:"timeout" default:"1000" description:"timeout millisec per ping"`
+	Interval    int    `long:"interval" default:"10" description:"sleep millisec after every ping"`
+	Count       int    `long:"count" default:"10" description:"Count Sending ping"`
+	PayloadSize int    `long:"payload-size" default:"56" description:"Payload size"`
+	KeyPrefix   string `long:"key-prefix" description:"Metric key prefix" required:"true"`
+	Version     bool   `short:"v" long:"version" description:"Show version"`
 }
 
 func round(f float64) int64 {
@@ -49,9 +50,8 @@ func getStats(opts cmdOpts) error {
 	// preflight
 	pinger.Timeout = time.Millisecond * time.Duration(opts.Timeout)
 	pinger.Interval = time.Millisecond * time.Duration(opts.Interval)
-	pinger.TTL = 64
 	pinger.Count = opts.Count
-	pinger.Size = 24
+	pinger.Size = opts.PayloadSize
 	pinger.OnFinish = func(s *ping.Statistics) {
 		stats = s
 	}
@@ -65,6 +65,7 @@ func getStats(opts cmdOpts) error {
 
 	now := uint64(time.Now().Unix())
 
+	// heuristics error count
 	errorCnt := opts.Count - len(stats.TTLs)
 	successCnt := len(stats.TTLs)
 
