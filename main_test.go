@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"testing"
 	"time"
@@ -62,6 +64,27 @@ func TestMainFunction(t *testing.T) {
 	defer func() { os.Args = originalArgs }()
 	os.Args = []string{"cmd", "--host=localhost", "--key-prefix=test"}
 
+	// Capture stdout
+	originalStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
 	exitCode := _main()
+
+	// Restore stdout
+	w.Close()
+	os.Stdout = originalStdout
+
+	// Read captured output
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
 	assert.Equal(t, 0, exitCode)
+	assert.Contains(t, output, "pinging.test_rtt_count.success")
+	assert.Contains(t, output, "pinging.test_rtt_count.error")
+	assert.Contains(t, output, "pinging.test_rtt_ms.min")
+	assert.Contains(t, output, "pinging.test_rtt_ms.max")
+	assert.Contains(t, output, "pinging.test_rtt_ms.average")
+	assert.Contains(t, output, "pinging.test_rtt_ms.90_percentile")
 }

@@ -21,8 +21,8 @@ type cmdOpts struct {
 	Interval   int    `long:"interval" default:"10" description:"sleep millisec after every ping"`
 	Count      int    `long:"count" default:"10" description:"Count Sending ping"`
 	Size       int    `long:"size" default:"56" description:"Payload size"`
-	Privileged bool   `long:"privileged" default:"false" description:"Use privileged ICMP raw socket"`
 	KeyPrefix  string `long:"key-prefix" description:"Metric key prefix" required:"true"`
+	Privileged bool   `long:"privileged" description:"Use privileged ICMP raw socket"`
 	Version    bool   `short:"v" long:"version" description:"Show version"`
 }
 
