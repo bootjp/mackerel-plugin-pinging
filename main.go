@@ -16,13 +16,14 @@ import (
 var version string
 
 type cmdOpts struct {
-	Host        string `long:"host" description:"Hostname to ping" required:"true"`
-	Timeout     int    `long:"timeout" default:"1000" description:"timeout millisec per ping"`
-	Interval    int    `long:"interval" default:"10" description:"sleep millisec after every ping"`
-	Count       int    `long:"count" default:"10" description:"Count Sending ping"`
-	PayloadSize int    `long:"payload-size" default:"56" description:"Payload size"`
-	KeyPrefix   string `long:"key-prefix" description:"Metric key prefix" required:"true"`
-	Version     bool   `short:"v" long:"version" description:"Show version"`
+	Host       string `long:"host" description:"Hostname to ping" required:"true"`
+	Timeout    int    `long:"timeout" default:"1000" description:"timeout millisec per ping"`
+	Interval   int    `long:"interval" default:"10" description:"sleep millisec after every ping"`
+	Count      int    `long:"count" default:"10" description:"Count Sending ping"`
+	Size       int    `long:"size" default:"56" description:"Payload size"`
+	Privileged bool   `long:"privileged" default:"false" description:"Use privileged ICMP raw socket"`
+	KeyPrefix  string `long:"key-prefix" description:"Metric key prefix" required:"true"`
+	Version    bool   `short:"v" long:"version" description:"Show version"`
 }
 
 func round(f float64) int64 {
@@ -33,6 +34,10 @@ func resolveHost(Host string) (*ping.Pinger, error) {
 	pinger := ping.New(Host)
 	err := pinger.Resolve()
 	return pinger, err
+}
+
+func rttMilliSec(rtt time.Duration) float64 {
+	return float64(rtt.Nanoseconds()) / 1000 / 1000
 }
 
 func getStats(opts cmdOpts) error {
@@ -51,7 +56,11 @@ func getStats(opts cmdOpts) error {
 	pinger.Timeout = time.Millisecond * time.Duration(opts.Timeout)
 	pinger.Interval = time.Millisecond * time.Duration(opts.Interval)
 	pinger.Count = opts.Count
-	pinger.Size = opts.PayloadSize
+	pinger.Size = opts.Size
+
+	// privileged is use raw socket icmp ping.
+	// privileged == false is use udp ping.
+	pinger.SetPrivileged(opts.Privileged)
 	pinger.OnFinish = func(s *ping.Statistics) {
 		stats = s
 	}
@@ -60,10 +69,9 @@ func getStats(opts cmdOpts) error {
 	if err != nil {
 		log.Printf("error in preflight: %v", err)
 		// ignore error
-		return nil
 	}
 
-	now := uint64(time.Now().Unix())
+	now := time.Now().Unix()
 
 	// heuristics error count
 	errorCnt := opts.Count - len(stats.TTLs)
@@ -79,10 +87,6 @@ func getStats(opts cmdOpts) error {
 	}
 
 	return nil
-}
-
-func rttMilliSec(rtt time.Duration) float64 {
-	return float64(rtt.Nanoseconds()) / 1000000
 }
 
 func main() {
